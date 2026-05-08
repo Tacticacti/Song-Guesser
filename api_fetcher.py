@@ -5,7 +5,7 @@ def fetch_metadata(url, params):
     response = requests.get(url, params)
     # print(response.json()['results'][0])
     results = response.json()['results']
-    data = results[random.randint(0, len(results))]
+    data = results[random.randint(0, len(results) - 1)]
     artist_name = data['artistName']
     track_name = data['trackName']
     release_date = data['releaseDate']
