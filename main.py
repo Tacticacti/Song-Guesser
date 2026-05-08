@@ -10,13 +10,9 @@ def main():
     score = 0
     with open('artists.txt', 'r') as file:
         artist_pool = file.read().splitlines()
-    # print(artist_pool)
     while strikes < MAX_STRIKES:
         print(f"\n--- score: {score} | strikes: {strikes}/{MAX_STRIKES} ---")
         artist = random.choice(artist_pool)
-        # artist = 'Ado'
-        # artist_name = f'{artist}'.replace(" ", "+")
-        # print(artist_name)
         params = {"term": artist, "media": "music", "entity": "song"}
         external_url = f'https://itunes.apple.com/search'
         fetched_artist_name, fetched_track_name, fetched_release_date, fetched_preview_url = fetch_metadata(external_url, params)
