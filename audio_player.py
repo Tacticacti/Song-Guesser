@@ -8,4 +8,4 @@ def play_audio(preview_link):
     player.set_media(instance.media_new(test_audio_link))
 
     player.play()
-    time.sleep(40)
+    time.sleep(30)
