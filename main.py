@@ -44,7 +44,7 @@ def start_game(artist_pool, strikes, score):
                 player_instance.stop()
                 break
             except ValueError:
-                print("Please enter a number between 0 and 2026!")
+                print("Please enter a number!")
 
         score, strikes = evaluate_guess(fetched_artist_name, fetched_track_name, correct_year, guess_val, strikes, score)
 
