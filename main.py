@@ -30,7 +30,13 @@ def start_game(artist_pool, strikes, score):
             print(f"You got it right!")
         else:
             strikes += 1
-            print(f"Unlucky! You were off by {abs(correct_year - guess_val)} years!")
+            year_difference = abs(correct_year - guess_val)
+            if year_difference < 5:
+                print("So Close!")
+            elif year_difference < 10:
+                print("Close! But not close enough!")
+            else:
+                print("Way off!")
         print(f"This song was {fetched_track_name} by {fetched_artist_name}!")
 
 def populate_artist_pool():
