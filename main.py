@@ -19,6 +19,7 @@ def evaluate_guess(fetched_artist_name, fetched_track_name, correct_year, guess_
         else:
             print("Way off!")
     print(f"This song was {fetched_track_name} by {fetched_artist_name}!")
+    return score, strikes
 
 def start_game(artist_pool, strikes, score):
     while strikes < MAX_STRIKES:
@@ -45,7 +46,7 @@ def start_game(artist_pool, strikes, score):
             except ValueError:
                 print("Please enter a number between 0 and 2026!")
 
-        evaluate_guess(fetched_artist_name, fetched_track_name, correct_year, guess_val, strikes, score)
+        score, strikes = evaluate_guess(fetched_artist_name, fetched_track_name, correct_year, guess_val, strikes, score)
 
 def populate_artist_pool():
     with open('artists.txt', 'r') as file:
