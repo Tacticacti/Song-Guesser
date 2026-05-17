@@ -1,6 +1,7 @@
 from audio_player import play_audio
 from api_fetcher import fetch_metadata
 import random
+import sys
 
 MAX_STRIKES = 3
 EXTERNAL_URL = 'https://itunes.apple.com/search'
@@ -38,8 +39,40 @@ def evaluate_guess(fetched_artist_name, fetched_track_name, correct_year, guess_
     print(f"This song was {fetched_track_name} by {fetched_artist_name}!")
     return score, strikes
 
-def start_game(artist_pool, strikes, score):
+def exit_game():
+    print("See you next time!")
+    print("<------------------------------------------------------------>")
+    sys.exit()
+
+def evaluate_choice(user_choice):
+    match user_choice:
+        case "1":
+            strikes = 0
+            score = 0
+            artist_pool = populate_artist_pool()
+            standard(artist_pool, strikes, score)
+        case "2":
+            print("WIP!")
+        case "3":
+            print("WIP")
+        case "4":
+            exit_game()
+        case _:
+            print("Please enter a valid number from 1 to 4!")
+
+def show_main_menu():
+    while True:
+        print("<------------------Welcome to Song Guesser!------------------>")
+        print("1. Start Normal Mode")
+        print("2. More Modes")
+        print("3. Settings")
+        print("4. Quit game")
+        user_choice = input("Please enter your choice between 1 to 4!\n")
+        evaluate_choice(user_choice)
+
+def standard(artist_pool, strikes, score):
     while strikes < MAX_STRIKES:
+        print("Starting Standard Mode")
         print(f"\n--- score: {score} | strikes: {strikes}/{MAX_STRIKES} ---")
         artist = random.choice(artist_pool)
         params = {"term": artist, "media": "music", "entity": "song", "attribute": "artistTerm"}
@@ -64,6 +97,9 @@ def start_game(artist_pool, strikes, score):
                 print("Please enter a number!")
 
         score, strikes = evaluate_guess(fetched_artist_name, fetched_track_name, correct_year, guess_val, strikes, score)
+    print(f"Game Over!")
+    print(f"Your final score was: {score}")
+    
 
 def populate_artist_pool():
     with open('artists.txt', 'r') as file:
@@ -71,10 +107,7 @@ def populate_artist_pool():
     return artist_pool
 
 def main():
-    strikes = 0
-    score = 0
-    artist_pool = populate_artist_pool()
-    start_game(artist_pool, strikes, score)
+    show_main_menu()
 
 if __name__ == "__main__":
     main()
