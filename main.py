@@ -5,10 +5,27 @@ import random
 MAX_STRIKES = 3
 EXTERNAL_URL = 'https://itunes.apple.com/search'
 
+def bonus_point(fetched_artist_name, fetched_track_name):
+    bonus_score = 0
+    artist_guess = input("Guess the artist name for a bonus point!\n")
+    if artist_guess == fetched_artist_name:
+        bonus_score += 1
+        print(f"You are right! This song is indeed by {fetched_artist_name}!")
+    else:
+        print(f"Nope! This song is by {fetched_artist_name}!")
+    guess_track_name = input("Guess this song's name for a bonus point!\n")
+    if guess_track_name == fetched_track_name:
+        bonus_score += 1
+        print("That's right!")
+    else:
+        print(f"Nope! That was incorrect!")
+    return bonus_score
+
 def evaluate_guess(fetched_artist_name, fetched_track_name, correct_year, guess_val, strikes, score):
     if guess_val == correct_year:
         score += 1
         print(f"You got it right!")
+        score += bonus_point(fetched_artist_name, fetched_track_name)
     else:
         strikes += 1
         year_difference = abs(correct_year - guess_val)
