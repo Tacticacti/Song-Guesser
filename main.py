@@ -1,4 +1,4 @@
-from audio_player import play_audio
+from audio_player import play_audio, set_volume
 from api_fetcher import fetch_metadata
 import random
 import sys
@@ -76,6 +76,7 @@ def standard(artist_pool, strikes, score):
         print(f"\n--- score: {score} | strikes: {strikes}/{MAX_STRIKES} ---")
         artist = random.choice(artist_pool)
         params = {"term": artist, "media": "music", "entity": "song", "attribute": "artistTerm"}
+
         try:
             fetched_artist_name, fetched_track_name, fetched_release_date, fetched_preview_url = fetch_metadata(EXTERNAL_URL, params)
         except ValueError:
@@ -85,12 +86,20 @@ def standard(artist_pool, strikes, score):
         correct_year = int(fetched_release_date.split("-")[0])
 
         player_instance = play_audio(fetched_preview_url)
-        user_guess = ""
-        guess_val = user_guess
+        guess_val = 0
         while True:
-            user_guess = input("What year did this song come out? ")
+            user_input = input("What year did this song come out? ")
+            if user_input.startswith("/vol "):
+                try:
+                    new_volume = int(user_input.split(" ")[1])
+                    set_volume(player_instance, new_volume)
+                    print(f"🔊 Volume adjusted to {new_volume}%")
+                    continue
+                except (ValueError, IndexError):
+                    print("❌ Invalid volume command. To adjust volume, please use the format: /vol <volume value>")
+                    continue
             try:
-                guess_val = int(user_guess)
+                guess_val = int(user_input)
                 player_instance.stop()
                 break
             except ValueError:
@@ -99,7 +108,6 @@ def standard(artist_pool, strikes, score):
         score, strikes = evaluate_guess(fetched_artist_name, fetched_track_name, correct_year, guess_val, strikes, score)
     print(f"Game Over!")
     print(f"Your final score was: {score}")
-    
 
 def populate_artist_pool():
     with open('artists.txt', 'r') as file:
