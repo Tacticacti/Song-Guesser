@@ -6,6 +6,7 @@ import * as api from './api'
 vi.mock('./api')
 
 const mocked = vi.mocked(api)
+const pauseMock = window.HTMLMediaElement.prototype.pause as ReturnType<typeof vi.fn>
 
 async function submitYear(year: string) {
   const input = await screen.findByLabelText(/What year/)
@@ -83,6 +84,54 @@ describe('Game', () => {
     await fireEvent.click(await screen.findByText(/See Final Score/))
     expect(await screen.findByText(/Game Over!/)).toBeTruthy()
     expect(screen.getByText(/Play Again/)).toBeTruthy()
+  })
+
+  it('keeps the music playing through the bonus round after a correct guess', async () => {
+    mocked.guessYear.mockResolvedValue({ correct: true, points: 1, year: 2022 })
+    mocked.guessBonus.mockResolvedValue({
+      artist_correct: true, track_correct: true, points: 2, artist: 'Ado', track: 'Show',
+    })
+    render(Game, { props: { onBackToMenu: vi.fn() } })
+    await submitYear('2022')
+
+    expect(await screen.findByText(/You got it right!/)).toBeTruthy()
+    expect(pauseMock).not.toHaveBeenCalled()
+
+    // still playing while the bonus result is revealed
+    await fireEvent.input(await screen.findByLabelText(/Artist name/), { target: { value: 'Ado' } })
+    await fireEvent.input(screen.getByLabelText(/Song name/), { target: { value: 'Show' } })
+    await fireEvent.click(screen.getByText(/Guess for Bonus Points/))
+    expect(await screen.findByText(/This song is indeed by Ado/)).toBeTruthy()
+    expect(pauseMock).not.toHaveBeenCalled()
+  })
+
+  it('stops the music after a wrong guess', async () => {
+    mocked.guessYear.mockResolvedValue({
+      correct: false, points: 0, hint: 'Way off!', year: 2022, artist: 'Ado', track: 'Show',
+    })
+    render(Game, { props: { onBackToMenu: vi.fn() } })
+    await submitYear('1990')
+
+    await screen.findByText(/Way off!/)
+    expect(pauseMock).toHaveBeenCalled()
+  })
+
+  it('stops the music when leaving the game screen', async () => {
+    const { unmount } = render(Game, { props: { onBackToMenu: vi.fn() } })
+    await screen.findByLabelText(/What year/)
+
+    expect(pauseMock).not.toHaveBeenCalled()
+    unmount()
+    expect(pauseMock).toHaveBeenCalled()
+  })
+
+  it('stops the music when a guess fails with a server error', async () => {
+    mocked.guessYear.mockRejectedValue(new Error('Could not reach the game server. Is it running?'))
+    render(Game, { props: { onBackToMenu: vi.fn() } })
+    await submitYear('1990')
+
+    await screen.findByText(/Could not reach the game server/)
+    expect(pauseMock).toHaveBeenCalled()
   })
 
   it('ignores a double-click on the Guess button', async () => {

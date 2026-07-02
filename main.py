@@ -25,12 +25,15 @@ def bonus_point(fetched_artist_name, fetched_track_name):
         print(f"Nope! That was incorrect!")
     return bonus_score
 
-def evaluate_guess(fetched_artist_name, fetched_track_name, correct_year, guess_val, strikes, score):
+def evaluate_guess(fetched_artist_name, fetched_track_name, correct_year, guess_val, strikes, score, player):
     if guess_val == correct_year:
         score += 1
         print(f"You got it right!")
+        # keep the music playing while the player guesses for bonus points
         score += bonus_point(fetched_artist_name, fetched_track_name)
+        player.stop()
     else:
+        player.stop()
         strikes += 1
         year_difference = abs(correct_year - guess_val)
         if year_difference < 5:
@@ -184,12 +187,11 @@ def standard(artist_pool, strikes, score):
                     continue
             try:
                 guess_val = int(user_input)
-                player_instance.stop()
                 break
             except ValueError:
                 print("Please enter a number!")
 
-        score, strikes = evaluate_guess(fetched_artist_name, fetched_track_name, correct_year, guess_val, strikes, score)
+        score, strikes = evaluate_guess(fetched_artist_name, fetched_track_name, correct_year, guess_val, strikes, score, player_instance)
     print(f"Game Over!")
     print(f"Your final score was: {score}")
 

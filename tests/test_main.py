@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import main
 from main import bonus_point, evaluate_guess, change_volume, add_artist, remove_artist
@@ -26,32 +26,51 @@ class TestEvaluateGuess(unittest.TestCase):
     @patch('main.bonus_point', return_value=2)
     @patch('builtins.print')
     def test_correct_year_awards_point_and_bonus(self, mock_print, mock_bonus):
-        score, strikes = evaluate_guess('Ado', 'Show', 2022, 2022, strikes=0, score=0)
+        score, strikes = evaluate_guess('Ado', 'Show', 2022, 2022, strikes=0, score=0, player=MagicMock())
         self.assertEqual(score, 3)
         self.assertEqual(strikes, 0)
 
     @patch('builtins.print')
     def test_wrong_year_adds_strike(self, mock_print):
-        score, strikes = evaluate_guess('Ado', 'Show', 2022, 1990, strikes=1, score=5)
+        score, strikes = evaluate_guess('Ado', 'Show', 2022, 1990, strikes=1, score=5, player=MagicMock())
         self.assertEqual(score, 5)
         self.assertEqual(strikes, 2)
+
+    @patch('builtins.print')
+    def test_music_keeps_playing_during_bonus_round(self, mock_print):
+        player = MagicMock()
+
+        def bonus_while_music_plays(artist, track):
+            # the music must still be playing while bonus guesses are made
+            self.assertFalse(player.stop.called)
+            return 0
+
+        with patch('main.bonus_point', side_effect=bonus_while_music_plays):
+            evaluate_guess('Ado', 'Show', 2022, 2022, strikes=0, score=0, player=player)
+        player.stop.assert_called_once()
+
+    @patch('builtins.print')
+    def test_music_stops_on_wrong_guess(self, mock_print):
+        player = MagicMock()
+        evaluate_guess('Ado', 'Show', 2022, 1990, strikes=0, score=0, player=player)
+        player.stop.assert_called_once()
 
     def get_printed_output(self, mock_print):
         return ' '.join(str(call.args[0]) for call in mock_print.call_args_list if call.args)
 
     @patch('builtins.print')
     def test_hint_so_close(self, mock_print):
-        evaluate_guess('Ado', 'Show', 2022, 2020, strikes=0, score=0)
+        evaluate_guess('Ado', 'Show', 2022, 2020, strikes=0, score=0, player=MagicMock())
         self.assertIn('So Close!', self.get_printed_output(mock_print))
 
     @patch('builtins.print')
     def test_hint_close(self, mock_print):
-        evaluate_guess('Ado', 'Show', 2022, 2015, strikes=0, score=0)
+        evaluate_guess('Ado', 'Show', 2022, 2015, strikes=0, score=0, player=MagicMock())
         self.assertIn('Close! But not close enough!', self.get_printed_output(mock_print))
 
     @patch('builtins.print')
     def test_hint_way_off(self, mock_print):
-        evaluate_guess('Ado', 'Show', 2022, 1990, strikes=0, score=0)
+        evaluate_guess('Ado', 'Show', 2022, 1990, strikes=0, score=0, player=MagicMock())
         self.assertIn('Way off!', self.get_printed_output(mock_print))
 
 class TestChangeVolume(unittest.TestCase):

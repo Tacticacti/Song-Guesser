@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte'
   import { startRound, guessYear, guessBonus } from './api'
   import { getVolume, saveVolume } from './settings'
 
@@ -64,14 +65,15 @@
       return
     }
     submitting = true
-    audio?.pause()
     try {
       const result = await guessYear(roundId, year)
       if (result.correct) {
+        // keep the music playing through the bonus round
         score += result.points
         messages = ['🎉 You got it right!', 'Guess the artist and song name for bonus points!']
         phase = 'bonus'
       } else {
+        audio?.pause()
         strikes += 1
         messages = [
           `❌ ${result.hint}`,
@@ -80,6 +82,7 @@
         phase = 'reveal'
       }
     } catch (error) {
+      audio?.pause()
       errorMessage = (error as Error).message
       phase = 'error'
     } finally {
@@ -104,12 +107,19 @@
       ]
       phase = 'reveal'
     } catch (error) {
+      audio?.pause()
       errorMessage = (error as Error).message
       phase = 'error'
     } finally {
       submitting = false
     }
   }
+
+  // the audio element can outlive the component (e.g. quitting to the menu
+  // mid-song), so make sure the music stops when the game screen goes away
+  onDestroy(() => {
+    audio?.pause()
+  })
 
   function continueGame() {
     if (strikes >= MAX_STRIKES) {
