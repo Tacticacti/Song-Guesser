@@ -4,9 +4,10 @@ import random
 def fetch_metadata(url, params):
     response = requests.get(url, params)
     results = response.json()['results']
-    if len(results) == 0:
+    matching_results = filter_by_artist(results, params['term'])
+    if len(matching_results) == 0:
         raise ValueError()
-    data = results[get_random_index(results)]
+    data = matching_results[get_random_index(matching_results)]
     artist_name = data['artistName']
     track_name = data['trackName']
     release_date = data['releaseDate']
@@ -15,3 +16,6 @@ def fetch_metadata(url, params):
 
 def get_random_index(results):
     return random.randint(0, len(results) - 1)
+
+def filter_by_artist(results, artist):
+    return [result for result in results if result['artistName'].lower() == artist.lower()]
