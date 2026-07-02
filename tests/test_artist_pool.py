@@ -43,5 +43,12 @@ class TestArtistPool(unittest.TestCase):
         save_artist_pool(['New Artist'])
         self.assertEqual(populate_artist_pool(), ['New Artist'])
 
+    def test_missing_file_returns_empty_list(self):
+        os.remove(self.temp_file)
+        try:
+            self.assertEqual(populate_artist_pool(), [])
+        finally:
+            self.write_file('')  # recreate so tearDown can remove it
+
 if __name__ == '__main__':
     unittest.main()

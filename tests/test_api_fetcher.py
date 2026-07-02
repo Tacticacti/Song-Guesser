@@ -94,3 +94,54 @@ class TestApiFetcher(unittest.TestCase):
         artist, track, date, url = fetch_metadata("http://dummy-url.com", {"term": "artist a"})
 
         self.assertEqual(artist, "Artist A")
+
+    @patch('api_fetcher.requests.get')
+    def test_skips_tracks_without_a_preview(self, mock_get):
+        # iTunes sometimes returns tracks without a previewUrl; they cannot be played
+        data = {
+            "resultCount": 2,
+            "results": [
+                {"trackName": "No Preview", "artistName": "Artist A", "releaseDate": "1990"},
+                {"trackName": "Song Zero", "artistName": "Artist A", "releaseDate": "1990", "previewUrl": "url0"},
+            ]
+        }
+        self.make_mock_response(data, mock_get)
+
+        for _ in range(10):
+            artist, track, date, url = fetch_metadata("http://dummy-url.com", {"term": "Artist A"})
+            self.assertEqual(track, "Song Zero")
+
+    @patch('api_fetcher.requests.get')
+    def test_skips_tracks_with_empty_release_date(self, mock_get):
+        data = {
+            "resultCount": 2,
+            "results": [
+                {"trackName": "No Date", "artistName": "Artist A", "releaseDate": "", "previewUrl": "url9"},
+                {"trackName": "Song Zero", "artistName": "Artist A", "releaseDate": "1990", "previewUrl": "url0"},
+            ]
+        }
+        self.make_mock_response(data, mock_get)
+
+        for _ in range(10):
+            artist, track, date, url = fetch_metadata("http://dummy-url.com", {"term": "Artist A"})
+            self.assertEqual(track, "Song Zero")
+
+    @patch('api_fetcher.requests.get')
+    def test_raises_when_all_matching_tracks_are_unplayable(self, mock_get):
+        data = {
+            "resultCount": 1,
+            "results": [
+                {"trackName": "No Preview", "artistName": "Artist A", "releaseDate": "1990"},
+            ]
+        }
+        self.make_mock_response(data, mock_get)
+
+        with self.assertRaises(ValueError):
+            fetch_metadata("http://dummy-url.com", {"term": "Artist A"})
+
+    @patch('api_fetcher.requests.get')
+    def test_handles_response_without_results_key(self, mock_get):
+        self.make_mock_response({"errorMessage": "Invalid key"}, mock_get)
+
+        with self.assertRaises(ValueError):
+            fetch_metadata("http://dummy-url.com", {"term": "Artist A"})

@@ -85,6 +85,22 @@ describe('Game', () => {
     expect(screen.getByText(/Play Again/)).toBeTruthy()
   })
 
+  it('ignores a double-click on the Guess button', async () => {
+    let resolveGuess!: (value: api.GuessResult) => void
+    mocked.guessYear.mockReturnValue(new Promise((resolve) => (resolveGuess = resolve)))
+    render(Game, { props: { onBackToMenu: vi.fn() } })
+
+    const input = await screen.findByLabelText(/What year/)
+    await fireEvent.input(input, { target: { value: '1990' } })
+    const guessButton = screen.getByText('Guess')
+    await fireEvent.click(guessButton)
+    await fireEvent.click(guessButton) // second click while the first request is in flight
+
+    resolveGuess({ correct: false, points: 0, hint: 'Way off!', year: 2022, artist: 'Ado', track: 'Show' })
+    expect(await screen.findByText(/Way off!/)).toBeTruthy()
+    expect(mocked.guessYear).toHaveBeenCalledTimes(1)
+  })
+
   it('shows an error screen when the server is unreachable', async () => {
     mocked.startRound.mockRejectedValue(new Error('Could not reach the game server. Is it running?'))
     render(Game, { props: { onBackToMenu: vi.fn() } })

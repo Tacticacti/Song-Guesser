@@ -150,6 +150,9 @@ def show_main_menu():
         evaluate_choice(user_choice)
 
 def standard(artist_pool, strikes, score):
+    if not artist_pool:
+        print("The artist list is empty! Add an artist in the settings first.")
+        return
     while strikes < MAX_STRIKES:
         print("Starting Standard Mode")
         print(f"\n--- score: {score} | strikes: {strikes}/{MAX_STRIKES} ---")

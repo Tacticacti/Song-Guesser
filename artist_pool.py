@@ -5,6 +5,8 @@ import os
 ARTIST_FILE = os.path.join(os.path.dirname(__file__), 'artists.txt')
 
 def populate_artist_pool():
+    if not os.path.exists(ARTIST_FILE):
+        return []
     with open(ARTIST_FILE, 'r') as file:
         artist_pool = [line.strip() for line in file if line.strip()]
     return artist_pool

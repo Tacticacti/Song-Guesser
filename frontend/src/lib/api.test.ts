@@ -66,4 +66,21 @@ describe('api client', () => {
     mockFetch.mockRejectedValue(new TypeError('fetch failed'))
     await expect(getArtists()).rejects.toThrow('Could not reach the game server. Is it running?')
   })
+
+  it('handles non-JSON error responses (e.g. a proxy error page)', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: () => Promise.reject(new SyntaxError('Unexpected token <')),
+    })
+    await expect(getArtists()).rejects.toThrow('The game server returned an unexpected error (500)')
+  })
+
+  it('does not show [object Object] for validation error details', async () => {
+    // FastAPI validation errors put an array of objects in detail
+    mockFetch.mockResolvedValue(
+      jsonResponse({ detail: [{ loc: ['body', 'year'], msg: 'value is not a valid integer' }] }, false),
+    )
+    await expect(guessYear('r1', NaN)).rejects.toThrow('Something went wrong!')
+  })
 })

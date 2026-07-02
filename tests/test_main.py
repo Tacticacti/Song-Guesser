@@ -87,6 +87,14 @@ class TestChangeVolume(unittest.TestCase):
         change_volume()
         self.assertEqual(main.game_settings['volume'], 70)
 
+class TestStandardMode(unittest.TestCase):
+
+    @patch('builtins.print')
+    def test_empty_artist_pool_does_not_crash(self, mock_print):
+        main.standard([], strikes=0, score=0)
+        printed = ' '.join(str(call.args[0]) for call in mock_print.call_args_list if call.args)
+        self.assertIn('empty', printed)
+
 class TestArtistListManagement(unittest.TestCase):
 
     @patch('main.save_artist_pool')

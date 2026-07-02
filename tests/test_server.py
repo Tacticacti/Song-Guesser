@@ -64,6 +64,20 @@ class TestArtistEndpoints(ServerTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(artist_pool.populate_artist_pool(), ['Ado'])
 
+class TestArtistEdgeCases(ServerTestCase):
+
+    def test_artist_name_with_line_breaks_rejected(self):
+        # a newline in the name would corrupt artists.txt into two entries
+        response = self.client.post('/api/artists', json={'name': 'Artist A\nArtist B'})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(artist_pool.populate_artist_pool(), ['Ado', 'Eminem'])
+
+    def test_artist_with_slash_can_be_added_and_removed(self):
+        self.client.post('/api/artists', json={'name': 'AC/DC'})
+        response = self.client.delete('/api/artists/AC%2FDC')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['artists'], ['Ado', 'Eminem'])
+
 class TestRoundLifecycle(ServerTestCase):
 
     def start_round(self):
@@ -146,6 +160,27 @@ class TestRoundLifecycle(ServerTestCase):
             json={'artist_guess': 'Ado', 'track_guess': 'Show'},
         )
         self.assertEqual(response.status_code, 404)
+
+    def test_empty_artist_list_returns_400(self):
+        with open(self.temp_file, 'w') as file:
+            file.write('')
+        response = self.client.post('/api/rounds')
+        self.assertEqual(response.status_code, 400)
+
+    def test_network_error_returns_502(self):
+        import requests
+        with patch('server.fetch_metadata', side_effect=requests.ConnectionError()):
+            response = self.client.post('/api/rounds')
+        self.assertEqual(response.status_code, 502)
+
+    def test_abandoned_rounds_are_evicted(self):
+        with patch.object(server, 'MAX_ACTIVE_ROUNDS', 3):
+            round_ids = [self.start_round()['round_id'] for _ in range(5)]
+        self.assertEqual(len(server.rounds), 3)
+        # the oldest rounds were dropped, the newest still work
+        self.assertNotIn(round_ids[0], server.rounds)
+        response = self.client.post(f'/api/rounds/{round_ids[-1]}/guess', json={'year': 2022})
+        self.assertEqual(response.status_code, 200)
 
     def test_round_is_consumed_after_bonus(self):
         round_id = self.start_round()['round_id']

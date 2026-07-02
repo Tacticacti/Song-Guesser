@@ -20,6 +20,7 @@
   let errorMessage = $state('')
   let volume = $state(getVolume())
   let audio: HTMLAudioElement | undefined = $state()
+  let submitting = $state(false)
 
   $effect(() => {
     if (audio) {
@@ -56,11 +57,13 @@
 
   async function submitYear(event: SubmitEvent) {
     event.preventDefault()
+    if (submitting) return
     const year = parseInt(yearInput, 10)
     if (isNaN(year)) {
       messages = ['Please enter a number!']
       return
     }
+    submitting = true
     audio?.pause()
     try {
       const result = await guessYear(roundId, year)
@@ -79,11 +82,15 @@
     } catch (error) {
       errorMessage = (error as Error).message
       phase = 'error'
+    } finally {
+      submitting = false
     }
   }
 
   async function submitBonus(event: SubmitEvent) {
     event.preventDefault()
+    if (submitting) return
+    submitting = true
     try {
       const result = await guessBonus(roundId, artistInput, trackInput)
       score += result.points
@@ -99,6 +106,8 @@
     } catch (error) {
       errorMessage = (error as Error).message
       phase = 'error'
+    } finally {
+      submitting = false
     }
   }
 
@@ -160,7 +169,7 @@
         <label for="year">What year did this song come out?</label>
         <div class="row">
           <input id="year" type="number" placeholder="e.g. 2016" bind:value={yearInput} />
-          <button type="submit">Guess</button>
+          <button type="submit" disabled={submitting}>Guess</button>
         </div>
       </form>
     {:else if phase === 'bonus'}
@@ -170,7 +179,7 @@
         <label for="track">Song name</label>
         <input id="track" type="text" placeholder="What's it called?" bind:value={trackInput} />
         <div class="actions">
-          <button type="submit">Guess for Bonus Points</button>
+          <button type="submit" disabled={submitting}>Guess for Bonus Points</button>
         </div>
       </form>
     {:else if phase === 'reveal'}

@@ -34,9 +34,17 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   } catch {
     throw new Error('Could not reach the game server. Is it running?')
   }
-  const body = await response.json()
+  let body: unknown
+  try {
+    body = await response.json()
+  } catch {
+    // the server (or proxy) returned something that is not JSON
+    throw new Error(`The game server returned an unexpected error (${response.status})`)
+  }
   if (!response.ok) {
-    throw new Error(body.detail ?? 'Something went wrong!')
+    // FastAPI validation errors put an object array in detail; only show plain strings
+    const detail = (body as { detail?: unknown }).detail
+    throw new Error(typeof detail === 'string' ? detail : 'Something went wrong!')
   }
   return body as T
 }

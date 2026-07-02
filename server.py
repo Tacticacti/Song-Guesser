@@ -1,5 +1,6 @@
 import random
 import uuid
+import requests
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -9,6 +10,7 @@ from artist_pool import populate_artist_pool, save_artist_pool
 
 EXTERNAL_URL = 'https://itunes.apple.com/search'
 MAX_FETCH_ATTEMPTS = 5
+MAX_ACTIVE_ROUNDS = 1000
 
 app = FastAPI(title="Song Guesser API")
 app.add_middleware(
@@ -41,6 +43,8 @@ def add_artist(request: ArtistRequest):
     name = request.name.strip()
     if not name:
         raise HTTPException(400, "The artist name cannot be empty!")
+    if '\n' in name or '\r' in name:
+        raise HTTPException(400, "The artist name cannot contain line breaks!")
     artist_pool = populate_artist_pool()
     if name.lower() in (artist.lower() for artist in artist_pool):
         raise HTTPException(400, f"{name} is already in the list!")
@@ -48,7 +52,7 @@ def add_artist(request: ArtistRequest):
     save_artist_pool(artist_pool)
     return {"artists": artist_pool}
 
-@app.delete("/api/artists/{name}")
+@app.delete("/api/artists/{name:path}")
 def remove_artist(name: str):
     artist_pool = populate_artist_pool()
     for artist in artist_pool:
@@ -63,6 +67,8 @@ def remove_artist(name: str):
 @app.post("/api/rounds")
 def start_round():
     artist_pool = populate_artist_pool()
+    if not artist_pool:
+        raise HTTPException(400, "The artist list is empty! Add an artist in the settings first.")
     for _ in range(MAX_FETCH_ATTEMPTS):
         artist = random.choice(artist_pool)
         params = {"term": artist, "media": "music", "entity": "song", "attribute": "artistTerm"}
@@ -70,6 +76,11 @@ def start_round():
             fetched_artist_name, fetched_track_name, fetched_release_date, fetched_preview_url = fetch_metadata(EXTERNAL_URL, params)
         except ValueError:
             continue
+        except requests.RequestException:
+            raise HTTPException(502, "Could not reach the iTunes API. Check your internet connection!")
+        if len(rounds) >= MAX_ACTIVE_ROUNDS:
+            # drop the oldest abandoned round so the store cannot grow forever
+            rounds.pop(next(iter(rounds)))
         round_id = str(uuid.uuid4())
         rounds[round_id] = {
             "artist": fetched_artist_name,
