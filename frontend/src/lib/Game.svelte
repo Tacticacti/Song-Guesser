@@ -19,16 +19,21 @@
   let trackInput = $state('')
   let messages: string[] = $state([])
   let errorMessage = $state('')
-  let volume = $state(getVolume())
   let audio: HTMLAudioElement | undefined = $state()
   let submitting = $state(false)
 
+  // start at the saved volume; the native player control adjusts it from there
   $effect(() => {
     if (audio) {
-      audio.volume = volume / 100
+      audio.volume = getVolume() / 100
     }
-    saveVolume(volume)
   })
+
+  function handleVolumeChange() {
+    if (audio) {
+      saveVolume(Math.round(audio.volume * 100))
+    }
+  }
 
   $effect(() => {
     if (audio && previewUrl) {
@@ -164,11 +169,7 @@
       <button class="secondary" onclick={onBackToMenu}>Back to Menu</button>
     </div>
   {:else}
-    <audio bind:this={audio} src={previewUrl} controls></audio>
-    <label class="volume">
-      🔊 Volume ({volume}%)
-      <input type="range" min="0" max="100" bind:value={volume} />
-    </label>
+    <audio bind:this={audio} src={previewUrl} controls onvolumechange={handleVolumeChange}></audio>
 
     {#each messages as message}
       <p class="message">{message}</p>
@@ -224,13 +225,6 @@
 
   audio {
     width: 100%;
-    margin-bottom: 0.75rem;
-  }
-
-  .volume {
-    display: block;
-    color: var(--text-dim);
-    font-size: 0.9rem;
     margin-bottom: 1rem;
   }
 

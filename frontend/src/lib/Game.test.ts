@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/svelte'
 import Game from './Game.svelte'
 import * as api from './api'
+import { getVolume, saveVolume } from './settings'
 
 vi.mock('./api')
 
@@ -84,6 +85,26 @@ describe('Game', () => {
     await fireEvent.click(await screen.findByText(/See Final Score/))
     expect(await screen.findByText(/Game Over!/)).toBeTruthy()
     expect(screen.getByText(/Play Again/)).toBeTruthy()
+  })
+
+  it('applies the saved volume when a song starts', async () => {
+    saveVolume(40)
+    const { container } = render(Game, { props: { onBackToMenu: vi.fn() } })
+    await screen.findByLabelText(/What year/)
+
+    const audio = container.querySelector('audio')!
+    expect(audio.volume).toBeCloseTo(0.4)
+  })
+
+  it('persists volume changes made on the native player control', async () => {
+    const { container } = render(Game, { props: { onBackToMenu: vi.fn() } })
+    await screen.findByLabelText(/What year/)
+
+    const audio = container.querySelector('audio')!
+    audio.volume = 0.3
+    await fireEvent(audio, new Event('volumechange'))
+
+    expect(getVolume()).toBe(30)
   })
 
   it('keeps the music playing through the bonus round after a correct guess', async () => {
