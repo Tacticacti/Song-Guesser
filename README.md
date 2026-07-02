@@ -6,6 +6,17 @@ Songs come from the [iTunes Search API](https://performance-partners.apple.com/s
 
 ## Web version (Svelte + FastAPI)
 
+Run both servers with one command (from the repo root):
+
+```sh
+npm install   # first time only
+npm run dev
+```
+
+Then open http://localhost:5173. Press `Ctrl+C` to stop both servers.
+
+### Running the servers separately
+
 Run the backend (from the repo root):
 
 ```sh
