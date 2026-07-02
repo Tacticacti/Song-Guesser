@@ -1,5 +1,6 @@
 from audio_player import play_audio, set_volume
 from api_fetcher import fetch_metadata
+from artist_pool import populate_artist_pool, save_artist_pool
 import random
 import sys
 
@@ -55,10 +56,6 @@ def change_volume():
         return
     game_settings["volume"] = new_volume
     print(f"🔊 Volume set to {new_volume}%")
-
-def save_artist_pool(artist_pool):
-    with open('artists.txt', 'w') as file:
-        file.write("\n".join(artist_pool))
 
 def add_artist(artist_pool):
     new_artist = input("Enter the name of the artist to add\n").strip()
@@ -192,11 +189,6 @@ def standard(artist_pool, strikes, score):
         score, strikes = evaluate_guess(fetched_artist_name, fetched_track_name, correct_year, guess_val, strikes, score)
     print(f"Game Over!")
     print(f"Your final score was: {score}")
-
-def populate_artist_pool():
-    with open('artists.txt', 'r') as file:
-        artist_pool = [line.strip() for line in file if line.strip()]
-    return artist_pool
 
 def main():
     show_main_menu()

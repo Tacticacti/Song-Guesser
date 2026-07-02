@@ -1,0 +1,107 @@
+:root {
+  --bg: #12101d;
+  --bg-card: #1d1a2e;
+  --bg-input: #262238;
+  --border: #37324e;
+  --text: #d6d2e4;
+  --text-dim: #8f89a8;
+  --accent: #8b5cf6;
+  --accent-hover: #a78bfa;
+  --success: #4ade80;
+  --danger: #f87171;
+  --warning: #fbbf24;
+
+  font-family: 'Segoe UI', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  color: var(--text);
+  background: radial-gradient(circle at 50% 0%, #241f3d 0%, var(--bg) 60%);
+  background-attachment: fixed;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+#app {
+  width: 100%;
+  max-width: 640px;
+  padding: 2rem 1rem;
+}
+
+h1 {
+  font-size: 2.2rem;
+  text-align: center;
+  color: #fff;
+  margin: 0 0 0.25rem;
+}
+
+h2 {
+  color: #fff;
+  margin: 0 0 1rem;
+}
+
+button {
+  font: inherit;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1.2rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+button:hover {
+  background: var(--accent-hover);
+}
+
+button:disabled {
+  background: var(--border);
+  color: var(--text-dim);
+  cursor: not-allowed;
+}
+
+button.secondary {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+}
+
+button.secondary:hover {
+  background: var(--border);
+}
+
+input[type='text'],
+input[type='number'] {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  width: 100%;
+}
+
+input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+input[type='range'] {
+  accent-color: var(--accent);
+  width: 100%;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+}
