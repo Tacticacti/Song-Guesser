@@ -12,3 +12,6 @@ def play_audio(preview_link):
 def set_volume(player, volume_level):
     safe_volume = max(0, min(100, volume_level))
     player.audio_set_volume(safe_volume)
+
+def get_volume(player):
+    return player.audio_get_volume()
