@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
   import { startRound, guessYear, guessBonus } from './api'
-  import { getVolume, saveVolume } from './settings'
+  import { getVolume, saveVolume, getAutoAdvance, getAutoAdvanceDelay } from './settings'
 
   const MAX_STRIKES = 3
 
@@ -21,6 +21,26 @@
   let errorMessage = $state('')
   let audio: HTMLAudioElement | undefined = $state()
   let submitting = $state(false)
+  let autoAdvanceCountdown: number | null = $state(null)
+  let autoAdvanceTimer: ReturnType<typeof setInterval> | undefined
+
+  function startAutoAdvance() {
+    if (!getAutoAdvance()) return
+    autoAdvanceCountdown = getAutoAdvanceDelay()
+    autoAdvanceTimer = setInterval(() => {
+      if (autoAdvanceCountdown === null) return
+      autoAdvanceCountdown -= 1
+      if (autoAdvanceCountdown <= 0) {
+        continueGame()
+      }
+    }, 1000)
+  }
+
+  function cancelAutoAdvance() {
+    clearInterval(autoAdvanceTimer)
+    autoAdvanceTimer = undefined
+    autoAdvanceCountdown = null
+  }
 
   // start at the saved volume; the native player control adjusts it from there
   $effect(() => {
@@ -45,6 +65,7 @@
   })
 
   async function nextSong() {
+    cancelAutoAdvance()
     phase = 'loading'
     messages = []
     yearInput = ''
@@ -85,6 +106,7 @@
           `This song was ${result.track} by ${result.artist}! (${result.year})`,
         ]
         phase = 'reveal'
+        startAutoAdvance()
       }
     } catch (error) {
       audio?.pause()
@@ -111,6 +133,7 @@
           : `❌ Nope! The song was ${result.track}!`,
       ]
       phase = 'reveal'
+      startAutoAdvance()
     } catch (error) {
       audio?.pause()
       errorMessage = (error as Error).message
@@ -121,12 +144,14 @@
   }
 
   // the audio element can outlive the component (e.g. quitting to the menu
-  // mid-song), so make sure the music stops when the game screen goes away
+  // mid-song), so stop the music and any pending auto-advance timer
   onDestroy(() => {
+    cancelAutoAdvance()
     audio?.pause()
   })
 
   function continueGame() {
+    cancelAutoAdvance()
     if (strikes >= MAX_STRIKES) {
       phase = 'gameover'
     } else {
@@ -197,6 +222,7 @@
       <div class="actions">
         <button onclick={continueGame}>
           {strikes >= MAX_STRIKES ? 'See Final Score' : 'Next Song ▶'}
+          {#if autoAdvanceCountdown !== null}({autoAdvanceCountdown}s){/if}
         </button>
       </div>
     {/if}

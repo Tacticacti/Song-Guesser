@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/svelte'
 import Game from './Game.svelte'
 import * as api from './api'
-import { getVolume, saveVolume } from './settings'
+import { getVolume, saveVolume, saveAutoAdvance, saveAutoAdvanceDelay } from './settings'
 
 vi.mock('./api')
 
@@ -177,5 +177,100 @@ describe('Game', () => {
 
     expect(await screen.findByText(/Could not reach the game server/)).toBeTruthy()
     expect(screen.getByText(/Try Again/)).toBeTruthy()
+  })
+})
+
+describe('Game auto-advance', () => {
+  const wrongGuess = {
+    correct: false, points: 0, hint: 'Way off!', year: 2022, artist: 'Ado', track: 'Show',
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    vi.useFakeTimers()
+    mocked.startRound.mockResolvedValue({ round_id: 'r1', preview_url: 'http://preview' })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  async function revealAfterWrongGuess() {
+    mocked.guessYear.mockResolvedValue(wrongGuess)
+    const rendered = render(Game, { props: { onBackToMenu: vi.fn() } })
+    await vi.advanceTimersByTimeAsync(0) // resolve startRound
+    const input = screen.getByLabelText(/What year/)
+    await fireEvent.input(input, { target: { value: '1990' } })
+    await fireEvent.click(screen.getByText('Guess'))
+    await vi.advanceTimersByTimeAsync(0) // resolve guessYear
+    expect(screen.getByText(/Way off!/)).toBeTruthy()
+    return rendered
+  }
+
+  it('automatically starts the next song after the configured delay', async () => {
+    saveAutoAdvance(true)
+    saveAutoAdvanceDelay(3)
+    await revealAfterWrongGuess()
+
+    expect(screen.getByText(/Next Song/).textContent).toContain('(3s)')
+    expect(mocked.startRound).toHaveBeenCalledTimes(1)
+
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(screen.getByText(/Next Song/).textContent).toContain('(1s)')
+    expect(mocked.startRound).toHaveBeenCalledTimes(1)
+
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(mocked.startRound).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not auto-advance when the toggle is off', async () => {
+    await revealAfterWrongGuess()
+
+    expect(screen.getByText(/Next Song/).textContent).not.toContain('s)')
+    await vi.advanceTimersByTimeAsync(60000)
+    expect(mocked.startRound).toHaveBeenCalledTimes(1)
+  })
+
+  it('clicking Next Song early cancels the timer so the song does not skip twice', async () => {
+    saveAutoAdvance(true)
+    saveAutoAdvanceDelay(3)
+    await revealAfterWrongGuess()
+
+    await fireEvent.click(screen.getByText(/Next Song/))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(mocked.startRound).toHaveBeenCalledTimes(2)
+
+    await vi.advanceTimersByTimeAsync(60000)
+    expect(mocked.startRound).toHaveBeenCalledTimes(2)
+  })
+
+  it('quitting the game cancels a pending auto-advance', async () => {
+    saveAutoAdvance(true)
+    saveAutoAdvanceDelay(3)
+    const { unmount } = await revealAfterWrongGuess()
+
+    unmount()
+    await vi.advanceTimersByTimeAsync(60000)
+    expect(mocked.startRound).toHaveBeenCalledTimes(1)
+  })
+
+  it('auto-advances to the game over screen on the final strike', async () => {
+    saveAutoAdvance(true)
+    saveAutoAdvanceDelay(2)
+    mocked.guessYear.mockResolvedValue(wrongGuess)
+    render(Game, { props: { onBackToMenu: vi.fn() } })
+
+    for (let strike = 1; strike <= 3; strike++) {
+      await vi.advanceTimersByTimeAsync(0)
+      const input = screen.getByLabelText(/What year/)
+      await fireEvent.input(input, { target: { value: '1990' } })
+      await fireEvent.click(screen.getByText('Guess'))
+      await vi.advanceTimersByTimeAsync(0)
+      await vi.advanceTimersByTimeAsync(2000) // countdown elapses
+    }
+
+    expect(screen.getByText(/Game Over!/)).toBeTruthy()
+    expect(mocked.startRound).toHaveBeenCalledTimes(3)
   })
 })

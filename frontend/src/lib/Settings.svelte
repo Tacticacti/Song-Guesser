@@ -1,6 +1,15 @@
 <script lang="ts">
   import { getArtists, addArtist, removeArtist } from './api'
-  import { getVolume, saveVolume } from './settings'
+  import {
+    getVolume,
+    saveVolume,
+    getAutoAdvance,
+    saveAutoAdvance,
+    getAutoAdvanceDelay,
+    saveAutoAdvanceDelay,
+    MIN_AUTO_ADVANCE_DELAY,
+    MAX_AUTO_ADVANCE_DELAY,
+  } from './settings'
 
   let { onBack }: { onBack: () => void } = $props()
 
@@ -8,9 +17,19 @@
   let newArtist = $state('')
   let message = $state('')
   let volume = $state(getVolume())
+  let autoAdvance = $state(getAutoAdvance())
+  let autoAdvanceDelay = $state(getAutoAdvanceDelay())
 
   $effect(() => {
     saveVolume(volume)
+  })
+
+  $effect(() => {
+    saveAutoAdvance(autoAdvance)
+  })
+
+  $effect(() => {
+    saveAutoAdvanceDelay(autoAdvanceDelay)
   })
 
   async function loadArtists() {
@@ -52,6 +71,22 @@
     <input type="range" min="0" max="100" bind:value={volume} />
   </label>
 
+  <label class="toggle">
+    <input type="checkbox" bind:checked={autoAdvance} />
+    Automatically play the next song after a guess
+  </label>
+  {#if autoAdvance}
+    <label class="delay">
+      ⏱ Delay before the next song ({autoAdvanceDelay}s)
+      <input
+        type="range"
+        min={MIN_AUTO_ADVANCE_DELAY}
+        max={MAX_AUTO_ADVANCE_DELAY}
+        bind:value={autoAdvanceDelay}
+      />
+    </label>
+  {/if}
+
   <h3>Artist List</h3>
   {#if message}
     <p class="message">{message}</p>
@@ -80,6 +115,21 @@
     display: block;
     color: var(--text-dim);
     margin-bottom: 1.5rem;
+  }
+
+  .toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-dim);
+    margin-bottom: 0.75rem;
+    cursor: pointer;
+  }
+
+  .delay {
+    display: block;
+    color: var(--text-dim);
+    margin: 0 0 1.5rem 1.6rem;
   }
 
   h3 {
