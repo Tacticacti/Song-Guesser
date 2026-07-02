@@ -50,6 +50,15 @@ venv/Scripts/python -m pip install -r requirements.txt
 
 ## Tests
 
+Run everything (Python + frontend) with one command from the repo root:
+
 ```sh
-venv/Scripts/python -m unittest discover tests
+npm test
+```
+
+Or each suite on its own:
+
+```sh
+venv/Scripts/python -m unittest discover tests   # backend + CLI (unittest)
+npm test --prefix frontend                       # frontend (vitest)
 ```
