@@ -213,11 +213,11 @@ describe('Game auto-advance', () => {
     saveAutoAdvanceDelay(3)
     await revealAfterWrongGuess()
 
-    expect(screen.getByText(/Next Song/).textContent).toContain('(3s)')
+    expect(screen.getByRole('status').textContent).toContain('Next song in 3s')
     expect(mocked.startRound).toHaveBeenCalledTimes(1)
 
     await vi.advanceTimersByTimeAsync(2000)
-    expect(screen.getByText(/Next Song/).textContent).toContain('(1s)')
+    expect(screen.getByRole('status').textContent).toContain('Next song in 1s')
     expect(mocked.startRound).toHaveBeenCalledTimes(1)
 
     await vi.advanceTimersByTimeAsync(1000)
@@ -227,7 +227,7 @@ describe('Game auto-advance', () => {
   it('does not auto-advance when the toggle is off', async () => {
     await revealAfterWrongGuess()
 
-    expect(screen.getByText(/Next Song/).textContent).not.toContain('s)')
+    expect(screen.queryByRole('status')).toBeNull()
     await vi.advanceTimersByTimeAsync(60000)
     expect(mocked.startRound).toHaveBeenCalledTimes(1)
   })
@@ -267,6 +267,10 @@ describe('Game auto-advance', () => {
       await fireEvent.input(input, { target: { value: '1990' } })
       await fireEvent.click(screen.getByText('Guess'))
       await vi.advanceTimersByTimeAsync(0)
+      if (strike === 3) {
+        // the final countdown leads to the score screen, and says so
+        expect(screen.getByRole('status').textContent).toContain('Final score in 2s')
+      }
       await vi.advanceTimersByTimeAsync(2000) // countdown elapses
     }
 

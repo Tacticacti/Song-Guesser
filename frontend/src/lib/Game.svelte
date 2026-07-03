@@ -22,11 +22,13 @@
   let audio: HTMLAudioElement | undefined = $state()
   let submitting = $state(false)
   let autoAdvanceCountdown: number | null = $state(null)
+  let autoAdvanceTotal = $state(1)
   let autoAdvanceTimer: ReturnType<typeof setInterval> | undefined
 
   function startAutoAdvance() {
     if (!getAutoAdvance()) return
-    autoAdvanceCountdown = getAutoAdvanceDelay()
+    autoAdvanceTotal = getAutoAdvanceDelay()
+    autoAdvanceCountdown = autoAdvanceTotal
     autoAdvanceTimer = setInterval(() => {
       if (autoAdvanceCountdown === null) return
       autoAdvanceCountdown -= 1
@@ -219,10 +221,23 @@
         </div>
       </form>
     {:else if phase === 'reveal'}
+      {#if autoAdvanceCountdown !== null}
+        <div class="countdown" role="status">
+          <span>
+            ⏱ {strikes >= MAX_STRIKES ? 'Final score' : 'Next song'} in
+            <strong>{autoAdvanceCountdown}s</strong>
+          </span>
+          <div class="countdown-track">
+            <div
+              class="countdown-fill"
+              style="width: {(autoAdvanceCountdown / autoAdvanceTotal) * 100}%"
+            ></div>
+          </div>
+        </div>
+      {/if}
       <div class="actions">
         <button onclick={continueGame}>
           {strikes >= MAX_STRIKES ? 'See Final Score' : 'Next Song ▶'}
-          {#if autoAdvanceCountdown !== null}({autoAdvanceCountdown}s){/if}
         </button>
       </div>
     {/if}
@@ -281,6 +296,35 @@
     display: flex;
     gap: 0.5rem;
     margin-top: 1rem;
+  }
+
+  .countdown {
+    background: var(--bg-input);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 0.6rem 0.8rem;
+    margin-top: 1rem;
+    text-align: center;
+  }
+
+  .countdown strong {
+    color: var(--accent-hover);
+    font-size: 1.15rem;
+  }
+
+  .countdown-track {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    margin-top: 0.5rem;
+    overflow: hidden;
+  }
+
+  .countdown-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    transition: width 1s linear;
   }
 
   .center {
