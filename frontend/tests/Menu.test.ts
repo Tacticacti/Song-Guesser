@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/svelte'
-import Menu from './Menu.svelte'
+import Menu from '../src/lib/Menu.svelte'
 
 describe('Menu', () => {
   it('starts the game when Start is clicked', async () => {

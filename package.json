@@ -2,9 +2,9 @@
   "name": "song-guesser",
   "private": true,
   "scripts": {
-    "dev": "concurrently -n api,web -c yellow,cyan \"venv\\Scripts\\python -m uvicorn server:app --port 8000\" \"npm run dev --prefix frontend\"",
+    "dev": "concurrently -n api,web -c yellow,cyan \"cd backend && venv\\Scripts\\python -m uvicorn server:app --port 8000\" \"npm run dev --prefix frontend\"",
     "test": "npm run test:api && npm run test:web",
-    "test:api": "venv\\Scripts\\python -m unittest discover tests",
+    "test:api": "cd backend && venv\\Scripts\\python -m unittest discover tests",
     "test:web": "npm test --prefix frontend"
   },
   "devDependencies": {

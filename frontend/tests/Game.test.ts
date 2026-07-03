@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/svelte'
-import Game from './Game.svelte'
-import * as api from './api'
-import { getVolume, saveVolume, saveAutoAdvance, saveAutoAdvanceDelay } from './settings'
+import Game from '../src/lib/Game.svelte'
+import * as api from '../src/lib/api'
+import { getVolume, saveVolume, saveAutoAdvance, saveAutoAdvanceDelay } from '../src/lib/settings'
 
-vi.mock('./api')
+vi.mock('../src/lib/api')
 
 const mocked = vi.mocked(api)
 const pauseMock = window.HTMLMediaElement.prototype.pause as ReturnType<typeof vi.fn>

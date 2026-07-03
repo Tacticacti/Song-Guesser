@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/svelte'
-import Settings from './Settings.svelte'
-import * as api from './api'
-import { getAutoAdvance, saveAutoAdvance } from './settings'
+import Settings from '../src/lib/Settings.svelte'
+import * as api from '../src/lib/api'
+import { getAutoAdvance, saveAutoAdvance } from '../src/lib/settings'
 
-vi.mock('./api')
+vi.mock('../src/lib/api')
 
 const mocked = vi.mocked(api)
 

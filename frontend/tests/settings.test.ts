@@ -6,7 +6,7 @@ import {
   saveAutoAdvance,
   getAutoAdvanceDelay,
   saveAutoAdvanceDelay,
-} from './settings'
+} from '../src/lib/settings'
 
 describe('volume settings', () => {
   beforeEach(() => {

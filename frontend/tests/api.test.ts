@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { getArtists, addArtist, removeArtist, startRound, guessYear, guessBonus } from './api'
+import { getArtists, addArtist, removeArtist, startRound, guessYear, guessBonus } from '../src/lib/api'
 
 const mockFetch = vi.fn()
 
