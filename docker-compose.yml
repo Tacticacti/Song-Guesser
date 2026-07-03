@@ -1,7 +1,12 @@
 services:
   db:
-    image: postgres:17-alpine
+    build:
+      context: .
+      dockerfile: db.Dockerfile
     container_name: song-guesser-db
+    # run as the postgres user from the start; the image's usual root-then-
+    # step-down dance (via gosu) is not needed and gosu has been removed
+    user: postgres
     environment:
       POSTGRES_USER: songguesser
       POSTGRES_PASSWORD: songguesser
