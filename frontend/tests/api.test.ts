@@ -1,5 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { getArtists, addArtist, removeArtist, startRound, guessYear, guessBonus } from '../src/lib/api'
+import {
+  getArtists,
+  addArtist,
+  removeArtist,
+  startRound,
+  guessYear,
+  guessBonus,
+  getLeaderboard,
+  submitScore,
+} from '../src/lib/api'
 
 const mockFetch = vi.fn()
 
@@ -50,6 +59,24 @@ describe('api client', () => {
     await guessBonus('round-1', 'Ado', 'Wrong')
     const [, options] = mockFetch.mock.calls[0]
     expect(JSON.parse(options.body)).toEqual({ artist_guess: 'Ado', track_guess: 'Wrong' })
+  })
+
+  it('getLeaderboard returns the score list', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ leaderboard: [{ name: 'Ed', score: 5 }] }))
+    expect(await getLeaderboard()).toEqual({ leaderboard: [{ name: 'Ed', score: 5 }] })
+    expect(mockFetch).toHaveBeenCalledWith('/api/leaderboard', expect.anything())
+  })
+
+  it('submitScore posts the name and score', async () => {
+    mockFetch.mockResolvedValue(
+      jsonResponse({ new_best: true, best_score: 5, leaderboard: [{ name: 'Ed', score: 5 }] }),
+    )
+    const result = await submitScore('Ed', 5)
+    expect(result.new_best).toBe(true)
+    const [path, options] = mockFetch.mock.calls[0]
+    expect(path).toBe('/api/leaderboard')
+    expect(options.method).toBe('POST')
+    expect(JSON.parse(options.body)).toEqual({ name: 'Ed', score: 5 })
   })
 
   it('startRound returns the round info', async () => {

@@ -2,6 +2,7 @@
   import { onDestroy } from 'svelte'
   import { startRound, guessYear, guessBonus } from './api'
   import { getVolume, saveVolume, getAutoAdvance, getAutoAdvanceDelay } from './settings'
+  import SaveScore from './SaveScore.svelte'
 
   const MAX_STRIKES = 3
 
@@ -191,6 +192,7 @@
   {:else if phase === 'gameover'}
     <h2 class="center">Game Over!</h2>
     <p class="center">Your final score was: <strong class="final-score">{score}</strong></p>
+    <SaveScore {score} />
     <div class="actions">
       <button onclick={restart}>Play Again</button>
       <button class="secondary" onclick={onBackToMenu}>Back to Menu</button>

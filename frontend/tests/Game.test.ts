@@ -87,6 +87,28 @@ describe('Game', () => {
     expect(screen.getByText(/Play Again/)).toBeTruthy()
   })
 
+  it('offers to save the final score on the game over screen', async () => {
+    mocked.guessYear.mockResolvedValue({
+      correct: false, points: 0, hint: 'Way off!', year: 2022, artist: 'Ado', track: 'Show',
+    })
+    mocked.submitScore.mockResolvedValue({
+      new_best: true, best_score: 0, leaderboard: [{ name: 'Ed', score: 0 }],
+    })
+    render(Game, { props: { onBackToMenu: vi.fn() } })
+
+    for (let strike = 1; strike <= 3; strike++) {
+      await submitYear('1990')
+      if (strike < 3) {
+        await fireEvent.click(await screen.findByText(/Next Song/))
+      }
+    }
+    await fireEvent.click(await screen.findByText(/See Final Score/))
+
+    await fireEvent.input(await screen.findByLabelText(/Save your score/), { target: { value: 'Ed' } })
+    await fireEvent.click(screen.getByText('Save Score'))
+    expect(mocked.submitScore).toHaveBeenCalledWith('Ed', 0)
+  })
+
   it('applies the saved volume when a song starts', async () => {
     saveVolume(40)
     const { container } = render(Game, { props: { onBackToMenu: vi.fn() } })

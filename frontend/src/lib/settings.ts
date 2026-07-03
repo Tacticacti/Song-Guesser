@@ -1,6 +1,7 @@
 const VOLUME_KEY = 'song-guesser-volume'
 const AUTO_ADVANCE_KEY = 'song-guesser-auto-advance'
 const AUTO_ADVANCE_DELAY_KEY = 'song-guesser-auto-advance-delay'
+const PLAYER_NAME_KEY = 'song-guesser-player-name'
 
 const DEFAULT_AUTO_ADVANCE_DELAY = 5
 export const MIN_AUTO_ADVANCE_DELAY = 1
@@ -41,4 +42,12 @@ export function saveAutoAdvanceDelay(seconds: number): void {
     return
   }
   localStorage.setItem(AUTO_ADVANCE_DELAY_KEY, String(seconds))
+}
+
+export function getPlayerName(): string {
+  return localStorage.getItem(PLAYER_NAME_KEY) ?? ''
+}
+
+export function savePlayerName(name: string): void {
+  localStorage.setItem(PLAYER_NAME_KEY, name)
 }

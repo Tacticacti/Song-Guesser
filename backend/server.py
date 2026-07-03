@@ -7,10 +7,13 @@ from pydantic import BaseModel
 
 from api_fetcher import fetch_metadata
 from artist_pool import populate_artist_pool, save_artist_pool
+from leaderboard import load_leaderboard, submit_score
 
 EXTERNAL_URL = 'https://itunes.apple.com/search'
 MAX_FETCH_ATTEMPTS = 5
 MAX_ACTIVE_ROUNDS = 1000
+MAX_NAME_LENGTH = 20
+TOP_SCORES = 10
 
 app = FastAPI(title="Song Guesser API")
 app.add_middleware(
@@ -33,6 +36,10 @@ class GuessRequest(BaseModel):
 class BonusRequest(BaseModel):
     artist_guess: str
     track_guess: str
+
+class ScoreRequest(BaseModel):
+    name: str
+    score: int
 
 @app.get("/api/artists")
 def get_artists():
@@ -63,6 +70,26 @@ def remove_artist(name: str):
             save_artist_pool(artist_pool)
             return {"artists": artist_pool}
     raise HTTPException(404, f"{name} is not in the list!")
+
+@app.get("/api/leaderboard")
+def get_leaderboard():
+    return {"leaderboard": load_leaderboard()[:TOP_SCORES]}
+
+@app.post("/api/leaderboard")
+def post_score(request: ScoreRequest):
+    name = request.name.strip()
+    if not name:
+        raise HTTPException(400, "Please enter a name!")
+    if len(name) > MAX_NAME_LENGTH:
+        raise HTTPException(400, f"Names can be at most {MAX_NAME_LENGTH} characters long!")
+    if request.score < 0:
+        raise HTTPException(400, "Scores cannot be negative!")
+    new_best, best_score, entries = submit_score(name, request.score)
+    return {
+        "new_best": new_best,
+        "best_score": best_score,
+        "leaderboard": entries[:TOP_SCORES],
+    }
 
 @app.post("/api/rounds")
 def start_round():

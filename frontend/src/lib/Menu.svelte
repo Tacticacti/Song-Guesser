@@ -1,10 +1,15 @@
 <script lang="ts">
-  let { onStart, onSettings }: { onStart: () => void; onSettings: () => void } = $props()
+  let {
+    onStart,
+    onSettings,
+    onLeaderboard,
+  }: { onStart: () => void; onSettings: () => void; onLeaderboard: () => void } = $props()
 </script>
 
 <div class="card menu">
   <button onclick={onStart}>▶ Start Normal Mode</button>
   <button class="secondary" disabled title="Coming soon!">More Modes (WIP)</button>
+  <button class="secondary" onclick={onLeaderboard}>🏆 Leaderboard</button>
   <button class="secondary" onclick={onSettings}>⚙ Settings</button>
 </div>
 

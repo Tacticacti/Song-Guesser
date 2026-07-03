@@ -24,6 +24,21 @@ export interface BonusResult {
   track: string
 }
 
+export interface LeaderboardEntry {
+  name: string
+  score: number
+}
+
+export interface Leaderboard {
+  leaderboard: LeaderboardEntry[]
+}
+
+export interface ScoreResult {
+  new_best: boolean
+  best_score: number
+  leaderboard: LeaderboardEntry[]
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   let response: Response
   try {
@@ -74,4 +89,12 @@ export function guessBonus(roundId: string, artistGuess: string, trackGuess: str
     method: 'POST',
     body: JSON.stringify({ artist_guess: artistGuess, track_guess: trackGuess }),
   })
+}
+
+export function getLeaderboard(): Promise<Leaderboard> {
+  return request('/api/leaderboard')
+}
+
+export function submitScore(name: string, score: number): Promise<ScoreResult> {
+  return request('/api/leaderboard', { method: 'POST', body: JSON.stringify({ name, score }) })
 }

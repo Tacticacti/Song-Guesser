@@ -6,6 +6,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 import artist_pool
+import leaderboard
 import server
 
 SONG = ('Ado', 'Show', '2022-01-01', 'http://preview.example/show.m4a')
@@ -20,12 +21,20 @@ class ServerTestCase(unittest.TestCase):
             file.write('Ado\nEminem')
         self.patcher = patch.object(artist_pool, 'ARTIST_FILE', self.temp_file)
         self.patcher.start()
+        handle, self.temp_leaderboard = tempfile.mkstemp(suffix='.json')
+        os.close(handle)
+        os.remove(self.temp_leaderboard)  # each test starts with no saved scores
+        self.leaderboard_patcher = patch.object(leaderboard, 'LEADERBOARD_FILE', self.temp_leaderboard)
+        self.leaderboard_patcher.start()
         server.rounds.clear()
         self.client = TestClient(server.app)
 
     def tearDown(self):
         self.patcher.stop()
         os.remove(self.temp_file)
+        self.leaderboard_patcher.stop()
+        if os.path.exists(self.temp_leaderboard):
+            os.remove(self.temp_leaderboard)
 
 class TestArtistEndpoints(ServerTestCase):
 
@@ -188,6 +197,65 @@ class TestRoundLifecycle(ServerTestCase):
         self.client.post(f'/api/rounds/{round_id}/bonus', json={'artist_guess': 'x', 'track_guess': 'y'})
         response = self.client.post(f'/api/rounds/{round_id}/bonus', json={'artist_guess': 'x', 'track_guess': 'y'})
         self.assertEqual(response.status_code, 404)
+
+class TestLeaderboardEndpoints(ServerTestCase):
+
+    def test_leaderboard_starts_empty(self):
+        response = self.client.get('/api/leaderboard')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'leaderboard': []})
+
+    def test_submitted_score_appears_on_the_leaderboard(self):
+        response = self.client.post('/api/leaderboard', json={'name': 'Ed', 'score': 4})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {
+            'new_best': True,
+            'best_score': 4,
+            'leaderboard': [{'name': 'Ed', 'score': 4}],
+        })
+        response = self.client.get('/api/leaderboard')
+        self.assertEqual(response.json()['leaderboard'], [{'name': 'Ed', 'score': 4}])
+
+    def test_higher_score_overrides_the_same_name(self):
+        self.client.post('/api/leaderboard', json={'name': 'Ed', 'score': 4})
+        response = self.client.post('/api/leaderboard', json={'name': 'ED', 'score': 9})
+        self.assertEqual(response.json(), {
+            'new_best': True,
+            'best_score': 9,
+            'leaderboard': [{'name': 'ED', 'score': 9}],
+        })
+
+    def test_lower_score_keeps_the_existing_best(self):
+        self.client.post('/api/leaderboard', json={'name': 'Ed', 'score': 9})
+        response = self.client.post('/api/leaderboard', json={'name': 'ed', 'score': 2})
+        self.assertEqual(response.json(), {
+            'new_best': False,
+            'best_score': 9,
+            'leaderboard': [{'name': 'Ed', 'score': 9}],
+        })
+
+    def test_name_is_trimmed(self):
+        response = self.client.post('/api/leaderboard', json={'name': '  Ed  ', 'score': 4})
+        self.assertEqual(response.json()['leaderboard'], [{'name': 'Ed', 'score': 4}])
+
+    def test_blank_name_rejected(self):
+        response = self.client.post('/api/leaderboard', json={'name': '   ', 'score': 4})
+        self.assertEqual(response.status_code, 400)
+
+    def test_overlong_name_rejected(self):
+        response = self.client.post('/api/leaderboard', json={'name': 'x' * 21, 'score': 4})
+        self.assertEqual(response.status_code, 400)
+
+    def test_negative_score_rejected(self):
+        response = self.client.post('/api/leaderboard', json={'name': 'Ed', 'score': -1})
+        self.assertEqual(response.status_code, 400)
+
+    def test_only_the_top_ten_scores_are_returned(self):
+        for i in range(12):
+            self.client.post('/api/leaderboard', json={'name': f'Player{i}', 'score': i})
+        response = self.client.get('/api/leaderboard')
+        scores = [entry['score'] for entry in response.json()['leaderboard']]
+        self.assertEqual(scores, list(range(11, 1, -1)))
 
 if __name__ == '__main__':
     unittest.main()

@@ -6,6 +6,8 @@ import {
   saveAutoAdvance,
   getAutoAdvanceDelay,
   saveAutoAdvanceDelay,
+  getPlayerName,
+  savePlayerName,
 } from '../src/lib/settings'
 
 describe('volume settings', () => {
@@ -79,5 +81,20 @@ describe('auto-advance settings', () => {
     saveAutoAdvanceDelay(10)
     saveAutoAdvanceDelay(NaN)
     expect(getAutoAdvanceDelay()).toBe(10)
+  })
+})
+
+describe('player name setting', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  it('is empty by default', () => {
+    expect(getPlayerName()).toBe('')
+  })
+
+  it('round-trips the saved name', () => {
+    savePlayerName('Ed')
+    expect(getPlayerName()).toBe('Ed')
   })
 })
