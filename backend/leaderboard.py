@@ -1,30 +1,53 @@
-import json
 import os
 
-LEADERBOARD_FILE = os.path.join(os.path.dirname(__file__), 'leaderboard.json')
+from sqlalchemy import Column, Integer, MetaData, String, Table, create_engine, insert, select, update
+
+# points at the dockerized PostgreSQL from docker-compose.yml by default;
+# tests override this with a local SQLite database so they need no Docker
+DATABASE_URL = os.environ.get(
+    'DATABASE_URL',
+    'postgresql+psycopg://songguesser:songguesser@localhost:5432/songguesser',
+)
+
+metadata = MetaData()
+
+scores = Table(
+    'scores',
+    metadata,
+    # players are identified by their lowercased name, so "Ed" and "ED"
+    # share one entry; the display name keeps whatever they typed last
+    Column('name_key', String, primary_key=True),
+    Column('name', String, nullable=False),
+    Column('score', Integer, nullable=False),
+)
+
+_engine = None
+
+
+def get_engine():
+    global _engine
+    if _engine is None:
+        # pre-ping discards stale pooled connections, so the leaderboard
+        # recovers on its own after a database restart
+        _engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+        metadata.create_all(_engine)
+    return _engine
+
+
+def reset_engine():
+    """Drop the cached engine so the next call reconnects (used by tests)."""
+    global _engine
+    if _engine is not None:
+        _engine.dispose()
+    _engine = None
 
 
 def load_leaderboard():
-    try:
-        with open(LEADERBOARD_FILE) as file:
-            entries = json.load(file)
-    except (OSError, ValueError):
-        return []
-    if not isinstance(entries, list):
-        return []
-    valid_entries = [
-        {'name': entry['name'], 'score': entry['score']}
-        for entry in entries
-        if isinstance(entry, dict)
-        and isinstance(entry.get('name'), str)
-        and isinstance(entry.get('score'), int)
-    ]
-    return sorted(valid_entries, key=lambda entry: entry['score'], reverse=True)
-
-
-def save_leaderboard(entries):
-    with open(LEADERBOARD_FILE, 'w') as file:
-        json.dump(entries, file, indent=2)
+    with get_engine().connect() as connection:
+        rows = connection.execute(
+            select(scores.c.name, scores.c.score).order_by(scores.c.score.desc(), scores.c.name)
+        ).all()
+    return [{'name': row.name, 'score': row.score} for row in rows]
 
 
 def submit_score(name, score):
@@ -34,17 +57,19 @@ def submit_score(name, score):
     their old entry (adopting the newly typed casing), a worse one is ignored.
     Returns (new_best, best_score, leaderboard).
     """
-    entries = load_leaderboard()
-    existing = next((entry for entry in entries if entry['name'].lower() == name.lower()), None)
-    if existing is None:
-        entries.append({'name': name, 'score': score})
-        new_best, best_score = True, score
-    elif score > existing['score']:
-        existing['name'] = name
-        existing['score'] = score
-        new_best, best_score = True, score
-    else:
-        new_best, best_score = False, existing['score']
-    entries.sort(key=lambda entry: entry['score'], reverse=True)
-    save_leaderboard(entries)
-    return new_best, best_score, entries
+    name_key = name.lower()
+    with get_engine().begin() as connection:
+        existing_score = connection.execute(
+            select(scores.c.score).where(scores.c.name_key == name_key)
+        ).scalar_one_or_none()
+        if existing_score is None:
+            connection.execute(insert(scores).values(name_key=name_key, name=name, score=score))
+            new_best, best_score = True, score
+        elif score > existing_score:
+            connection.execute(
+                update(scores).where(scores.c.name_key == name_key).values(name=name, score=score)
+            )
+            new_best, best_score = True, score
+        else:
+            new_best, best_score = False, existing_score
+    return new_best, best_score, load_leaderboard()

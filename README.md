@@ -8,19 +8,34 @@ Songs come from the [iTunes Search API](https://performance-partners.apple.com/s
 
 - `backend/` — Python package: FastAPI server (`server.py`), CLI game (`main.py`), and their tests in `backend/tests/`
 - `frontend/` — Svelte + TypeScript app, with its tests in `frontend/tests/`
+- `docker-compose.yml` — PostgreSQL database that stores the leaderboard (data
+  persists in a Docker volume). The backend connects using the `DATABASE_URL`
+  environment variable if set. Tests use a throwaway SQLite database instead,
+  so they run without Docker.
 
 ## Web version (Svelte + FastAPI)
 
-Run both servers with one command (from the repo root):
+Run everything with one command (from the repo root):
 
 ```sh
 npm install   # first time only
 npm run dev
 ```
 
-Then open http://localhost:5173. Press `Ctrl+C` to stop both servers.
+This starts the leaderboard database (PostgreSQL in Docker), the API, and the
+frontend. Then open http://localhost:5173. Press `Ctrl+C` to stop both servers;
+stop the database with `docker compose down`.
+
+If Docker is not running, the game still works — only the leaderboard is
+unavailable.
 
 ### Running the servers separately
+
+Start the leaderboard database (from the repo root):
+
+```sh
+docker compose up -d
+```
 
 Run the backend:
 

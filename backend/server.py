@@ -4,6 +4,7 @@ import requests
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from sqlalchemy.exc import OperationalError
 
 from api_fetcher import fetch_metadata
 from artist_pool import populate_artist_pool, save_artist_pool
@@ -71,9 +72,15 @@ def remove_artist(name: str):
             return {"artists": artist_pool}
     raise HTTPException(404, f"{name} is not in the list!")
 
+DATABASE_DOWN_MESSAGE = "The leaderboard is unavailable right now. Is the database running?"
+
 @app.get("/api/leaderboard")
 def get_leaderboard():
-    return {"leaderboard": load_leaderboard()[:TOP_SCORES]}
+    try:
+        entries = load_leaderboard()
+    except OperationalError:
+        raise HTTPException(503, DATABASE_DOWN_MESSAGE)
+    return {"leaderboard": entries[:TOP_SCORES]}
 
 @app.post("/api/leaderboard")
 def post_score(request: ScoreRequest):
@@ -84,7 +91,10 @@ def post_score(request: ScoreRequest):
         raise HTTPException(400, f"Names can be at most {MAX_NAME_LENGTH} characters long!")
     if request.score < 0:
         raise HTTPException(400, "Scores cannot be negative!")
-    new_best, best_score, entries = submit_score(name, request.score)
+    try:
+        new_best, best_score, entries = submit_score(name, request.score)
+    except OperationalError:
+        raise HTTPException(503, DATABASE_DOWN_MESSAGE)
     return {
         "new_best": new_best,
         "best_score": best_score,

@@ -21,20 +21,22 @@ class ServerTestCase(unittest.TestCase):
             file.write('Ado\nEminem')
         self.patcher = patch.object(artist_pool, 'ARTIST_FILE', self.temp_file)
         self.patcher.start()
-        handle, self.temp_leaderboard = tempfile.mkstemp(suffix='.json')
+        handle, self.temp_db = tempfile.mkstemp(suffix='.sqlite')
         os.close(handle)
-        os.remove(self.temp_leaderboard)  # each test starts with no saved scores
-        self.leaderboard_patcher = patch.object(leaderboard, 'LEADERBOARD_FILE', self.temp_leaderboard)
+        self.leaderboard_patcher = patch.object(
+            leaderboard, 'DATABASE_URL', f'sqlite:///{self.temp_db}'
+        )
         self.leaderboard_patcher.start()
+        leaderboard.reset_engine()  # each test starts with a fresh, empty database
         server.rounds.clear()
         self.client = TestClient(server.app)
 
     def tearDown(self):
         self.patcher.stop()
         os.remove(self.temp_file)
+        leaderboard.reset_engine()
         self.leaderboard_patcher.stop()
-        if os.path.exists(self.temp_leaderboard):
-            os.remove(self.temp_leaderboard)
+        os.remove(self.temp_db)
 
 class TestArtistEndpoints(ServerTestCase):
 
@@ -256,6 +258,17 @@ class TestLeaderboardEndpoints(ServerTestCase):
         response = self.client.get('/api/leaderboard')
         scores = [entry['score'] for entry in response.json()['leaderboard']]
         self.assertEqual(scores, list(range(11, 1, -1)))
+
+    def test_unreachable_database_returns_503(self):
+        from sqlalchemy.exc import OperationalError
+        database_down = OperationalError('connect', {}, Exception('database is down'))
+        with patch('server.load_leaderboard', side_effect=database_down):
+            response = self.client.get('/api/leaderboard')
+        self.assertEqual(response.status_code, 503)
+        with patch('server.submit_score', side_effect=database_down):
+            response = self.client.post('/api/leaderboard', json={'name': 'Ed', 'score': 4})
+        self.assertEqual(response.status_code, 503)
+        self.assertIn('database', response.json()['detail'])
 
 if __name__ == '__main__':
     unittest.main()

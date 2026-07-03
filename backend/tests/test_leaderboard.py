@@ -1,4 +1,3 @@
-import json
 import os
 import tempfile
 import unittest
@@ -9,53 +8,30 @@ from leaderboard import load_leaderboard, submit_score
 
 
 class LeaderboardTestCase(unittest.TestCase):
+    """Runs the real queries against a throwaway SQLite database."""
 
     def setUp(self):
-        handle, self.temp_file = tempfile.mkstemp(suffix='.json')
+        handle, self.temp_db = tempfile.mkstemp(suffix='.sqlite')
         os.close(handle)
-        os.remove(self.temp_file)  # start without a file, like a fresh install
-        self.patcher = patch.object(leaderboard, 'LEADERBOARD_FILE', self.temp_file)
+        self.patcher = patch.object(leaderboard, 'DATABASE_URL', f'sqlite:///{self.temp_db}')
         self.patcher.start()
+        leaderboard.reset_engine()
 
     def tearDown(self):
+        leaderboard.reset_engine()
         self.patcher.stop()
-        if os.path.exists(self.temp_file):
-            os.remove(self.temp_file)
-
-    def write_file(self, content):
-        with open(self.temp_file, 'w') as file:
-            file.write(content)
+        os.remove(self.temp_db)
 
 
 class TestLoadLeaderboard(LeaderboardTestCase):
 
-    def test_empty_when_file_missing(self):
+    def test_empty_on_a_fresh_database(self):
         self.assertEqual(load_leaderboard(), [])
-
-    def test_empty_when_file_is_corrupt(self):
-        self.write_file('not json {')
-        self.assertEqual(load_leaderboard(), [])
-
-    def test_empty_when_file_is_not_a_list(self):
-        self.write_file('{"name": "Ed", "score": 3}')
-        self.assertEqual(load_leaderboard(), [])
-
-    def test_skips_malformed_entries(self):
-        self.write_file(json.dumps([
-            {'name': 'Ed', 'score': 3},
-            {'name': 'NoScore'},
-            {'score': 5},
-            {'name': 'BadScore', 'score': 'five'},
-            'not a dict',
-        ]))
-        self.assertEqual(load_leaderboard(), [{'name': 'Ed', 'score': 3}])
 
     def test_returns_entries_sorted_by_score_descending(self):
-        self.write_file(json.dumps([
-            {'name': 'Low', 'score': 1},
-            {'name': 'High', 'score': 9},
-            {'name': 'Mid', 'score': 4},
-        ]))
+        submit_score('Low', 1)
+        submit_score('High', 9)
+        submit_score('Mid', 4)
         self.assertEqual([entry['name'] for entry in load_leaderboard()], ['High', 'Mid', 'Low'])
 
 
@@ -93,10 +69,11 @@ class TestSubmitScore(LeaderboardTestCase):
         self.assertTrue(new_best)
         self.assertEqual(entries, [{'name': 'ED', 'score': 7}])
 
-    def test_scores_persist_to_the_file(self):
+    def test_scores_survive_a_reconnect(self):
         submit_score('Ed', 3)
-        with open(self.temp_file) as file:
-            self.assertEqual(json.load(file), [{'name': 'Ed', 'score': 3}])
+        # a new engine on the same database sees the stored score
+        leaderboard.reset_engine()
+        self.assertEqual(load_leaderboard(), [{'name': 'Ed', 'score': 3}])
 
     def test_leaderboard_stays_sorted_after_submissions(self):
         submit_score('Mid', 4)

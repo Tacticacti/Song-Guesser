@@ -2,3 +2,5 @@ requests
 python-vlc
 fastapi
 uvicorn[standard]
+sqlalchemy
+psycopg[binary]
